@@ -1,20 +1,19 @@
 import fs from 'fs';
 import Parser from './Parser';
 
-const c = Object.freeze({
-  temp_base_addr: 5, // fixed base addr for TEMP memory segment
-  seg2symbol: { // vm memory segment to asm symbol mapping
+const {TEMP_BASE_ADDR, SYMBOL} = Object.freeze({
+  TEMP_BASE_ADDR: 5, // fixed base addr for TEMP memory segment
+  SYMBOL: { // vm memory segment to asm symbol mapping
     local: 'LCL',
     argument: 'ARG',
     this: 'THIS',
     that: 'THAT',
-    pointer: 'POINTER',
   },
 });
 
 export default class CodeWriter {
   constructor(filename) {
-    console.log('write to', filename);
+    console.log('Output to', `${process.cwd()}/${filename}`);
     try {
       this.fd = fs.openSync(filename, 'w+');
     } catch(err) {
@@ -22,13 +21,18 @@ export default class CodeWriter {
     }
   }
 
+  /*
+    VM: add
+    ASM pseudocode: SP--, D = *SP, SP--, D = D + *SP, *SP = D
+
+    VM: sub
+    ASM pseudocode: SP--, D = *SP, SP--, D = *SP - D, *SP = D
+  */
   writeArithmetic(command) {
     try {
       fs.appendFileSync(this.fd, `// ${command}\n`);
 
       if (command === 'add' || command === 'sub') {
-        // add SP--, D = *SP, SP--, D = D + *SP, *SP = D
-        // sub SP--, D = *SP, SP--, D = *SP - D, *SP = D
         var op = command === 'add' ? 'D=D+M' : 'D=M-D';
 
         fs.appendFileSync(this.fd, [
@@ -52,81 +56,88 @@ export default class CodeWriter {
     }
   }
 
+  /*
+    VM: push segment i
+    ASM pseudocode: addr = segment + i, *SP = *addr, SP++
+
+    VM: push pointer 0/1
+    ASM pseudocode: *SP = THIS/THAT, SP++
+
+    VM: pop segment i
+    ASM pseudocode: addr = segment + i, SP--, *addr = *SP
+
+    VM: pop pointer 0/1
+    ASM pseudocode: SP--, THIS/THAT=*SP
+  */
   writePushPop(command, segment, index) {
     try {
       fs.appendFileSync(this.fd, `// ${command} ${segment} ${index}\n`);
 
-      // push segment i
-      // addr = segment + i, *SP = *addr, SP++
-      // push pointer 0/1
-      // *SP = THIS/THAT, SP++
-
       if (command === Parser.commands.C_PUSH) {
-        // compute *addr
-        var stackVal;
-        if (segment === 'constant') {
-          stackVal = [`@${index}`, 'D=A'];
-        } else if (segment === 'temp') {
-          // addr = 5 + i
-          stackVal = [
-            '@5',
-            'D=A',
-            `@${index}`,
-            'A=D+A',
-            'D=M',
-          ];
-        } else if (segment === 'pointer') {
-          stackVal = [
-            `@${index == 0 ? 'THIS' : 'THAT'}`,
-            'D=M',
-          ];
-        } else {
-          stackVal = [
-            `@${c.seg2symbol[segment]}`,
-            'D=M',
-            `@${index}`,
-            'A=D+A',
-            'D=M',
-          ];
-        }
-
-        fs.appendFileSync(this.fd,
-          [
-            ...stackVal,
+        let {setD, push} = {
+          setD: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
+              `@${baseAddr}`,
+              parseInt(baseAddr) ? 'D=A' : 'D=M',
+              ...(offset
+                ? [
+                  `@${offset}`,
+                  'A=D+A',
+                  'D=M',
+                ]
+                : '')
+            ],
+          push: [
             '@SP',
             'A=M',
-            'M=D', // *SP = *addr
+            'M=D', // *SP = D
             '@SP',
-            'M=M+1', // SP++
-          ].join('\n') + '\n');
+            'M=M+1',
+          ],
+        }
+
+        let asm;
+        if (segment === 'constant') {
+          asm = [].concat(
+            setD(index),
+            push,
+          );
+        } else if (segment === 'temp') {
+          asm = [].concat(
+            setD(TEMP_BASE_ADDR, index),
+            push,
+          );
+        } else if (segment === 'pointer') {
+          asm = [].concat(
+            setD(index == 0 ? 'THIS' : 'THAT'),
+            push,
+          );
+        } else {
+          asm = [].concat(
+            setD(SYMBOL[segment], index),
+            push,
+          );
+        }
+
+        fs.appendFileSync(this.fd, asm.join('\n') + '\n');
       } else if (command === Parser.commands.C_POP) {
         if (segment === 'constant') {
           throw new Error('Cannot pop constant. Exiting...');
         }
-        // pop segment i
-        // addr = segment + i, SP--, *addr = *SP
-        // pop pointer 0/1
-        // SP--, THIS/THAT=*SP
 
-        var {addr, decSP, pop, addrPtr} = {
-          addr: (baseAddr, index='0') => [
+        let {addr, pop, addrPtr} = {
+          addr: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
             `@${baseAddr}`,
-            ...(parseInt(baseAddr)
-              ? ['D=A']
-              : ['D=M',
-                `@${index}`,
-                'D=D+A']), // segment + i
+            parseInt(baseAddr) ? 'D=A' : 'D=M',
+            `@${offset}`,
+            'D=D+A', // baseAddr + offset
             '@addr',
             'M=D',
           ],
-          decSP: [
-            '@SP',
-            'M=M-1', // SP--
-          ],
           pop: [
             '@SP',
+            'M=M-1', // point to top of stack
             'A=M',
-            'D=M', // store val in D
+            'D=M', // pop in D
           ],
           addrPtr: [
             '@addr',
@@ -135,25 +146,22 @@ export default class CodeWriter {
           ],
         };
 
-        var asm;
+        let asm;
         if (segment === 'temp') {
           asm = [].concat(
-            addr(c.temp_base_addr),
-            decSP,
+            addr(TEMP_BASE_ADDR, index),
             pop,
             addrPtr,
           );
         } else if (segment === 'pointer') {
           asm = [].concat(
-            decSP,
             pop,
             `@${index == 0 ? 'THIS' : 'THAT'}`,
             'M=D',
           );
         } else {
           asm = [].concat(
-            addr(c.seg2symbol[segment], index),
-            decSP,
+            addr(SYMBOL[segment], index),
             pop,
             addrPtr,
           );

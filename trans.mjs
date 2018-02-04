@@ -2,22 +2,28 @@ import path from 'path';
 import Parser from './Parser';
 import CodeWriter from './CodeWriter';
 
-var vmfile = process.argv[2];
+const vmfile = process.argv[2];
 if (typeof vmfile === 'undefined') {
   console.log('Usage: node --experimental-modules trans.mjs <vm file>');
   process.exit(1);
 }
 
-var cw = new CodeWriter(`${path.basename(vmfile, '.vm')}.asm`);
+const cw = new CodeWriter(`${path.join(path.dirname(vmfile), path.basename(vmfile, '.vm'))}.asm`);
 console.log('Reading', vmfile);
 
-var parser = new Parser(vmfile);
-while (parser.hasMoreCommands()) {
+const parser = new Parser(vmfile);
+
+console.log('Parsing commands...');
+console.log('command'.padStart(12, ' '), 'arg1'.padStart(8, ' '), 'arg2'.padStart(4, ' '));
+
+for (var count=0; parser.hasMoreCommands(); count++) {
   parser.advance();
-  var command = parser.commandType();
-  var arg1 = parser.arg1();
-  var arg2 = parser.arg2();
-  console.log('command', command, 'arg1', arg1, 'arg2', arg2);
+  let command = parser.commandType();
+  let arg1 = parser.arg1();
+  let arg2 = parser.arg2() || '';
+
+  console.log(command.padStart(12, ' '), arg1.padStart(8, ' '), arg2.padStart(4, ' '));
+
   switch (parser.commandType()) {
     case Parser.commands.C_ARITHMETIC:
       cw.writeArithmetic(arg1);
@@ -28,8 +34,6 @@ while (parser.hasMoreCommands()) {
       break;
   }
 }
+
+console.log('\nProcessed', count, 'commands');
 cw.close();
-
-
-
-

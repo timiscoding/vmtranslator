@@ -19,10 +19,7 @@ export default class Parser {
     this.line = this.rl.next();
     this.lineNum++;
 
-    do {
-      console.log(this.lineNum, 'hasMoreCommands', this.line.toString().trim())
-    } while (/^\s*$|^\/\//.test(this.line.toString())
-      && this.hasMoreCommands())
+    while (/^\s*$|^\/\//.test(this.line.toString().trim()) && this.hasMoreCommands()) {}
 
     return !!this.line;
   }
@@ -33,9 +30,9 @@ export default class Parser {
   }
 
   commandType() {
-    var pop = /^pop/;
-    var push = /^push/;
-    var arithLogic = /^add|sub|neg|eq|gt|lt|and|or|not/;
+    const pop = /^pop/;
+    const push = /^push/;
+    const arithLogic = /^add|sub|neg|eq|gt|lt|and|or|not/;
 
     if (pop.test(this.line)) {
       this.command = Parser.commands.C_POP;
@@ -52,8 +49,8 @@ export default class Parser {
     if (this.command === Parser.commands.C_ARITHMETIC) {
       return this.line;
     } else if (this.command === Parser.commands.C_PUSH || this.command === Parser.commands.C_POP) {
-      var re = /^(?:push|pop)\s+(\w+)/;
-      var [, arg1] = this.line.match(re);
+      const re = /^(?:push|pop)\s+(\w+)/;
+      const [, arg1] = this.line.match(re);
       return arg1;
     }
   }
@@ -62,7 +59,7 @@ export default class Parser {
     switch(this.command) {
       case Parser.commands.C_POP:
       case Parser.commands.C_PUSH:
-        var re = /^(?:push|pop)\s+\w+\s+(\w+)/;
+        const re = /^(?:push|pop)\s+\w+\s+(\w+)/;
         var [, arg2] = this.line.match(re);
         break;
     }
