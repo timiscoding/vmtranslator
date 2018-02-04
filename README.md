@@ -1,0 +1,113 @@
+# VM translator
+A node.js implementation of [Project 7](http://nand2tetris.org/07.php) in the [Nand2Tetris course](http://nand2tetris.org/) (part 2) that translates a stack based VM code to the Hack assembly language.
+
+<details>
+  <summary>Example VM code to Hack assembly</summary>
+  <table>
+  <tr>
+  <th>VM code</th>
+  <th>Hack ASM</th>
+  </tr>
+  <tr>
+  <td style="vertical-align: top">
+  <pre>
+  push constant 10
+  push constant 21
+  add
+  pop argument 2
+  </pre>
+  </td>
+  <td>
+  <pre>
+// C_PUSH constant 10
+@10
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_PUSH constant 21
+@21
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// add
+@SP
+M=M-1
+A=M
+D=M
+@SP
+M=M-1
+A=M
+D=D+M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_POP argument 2
+@ARG
+D=M
+@2
+D=D+A
+@addr
+M=D
+@SP
+M=M-1
+@SP
+A=M
+D=M
+@addr
+A=M
+M=D
+  </pre>
+  </td>
+  </tr>
+  </table>
+</details>
+
+## Code structure
+Object oriented, follows the recommended API specified in the course:
+
+### trans
+main program coordinates parsing and translation
+
+### Parser
+parses vm file line by line extracting commands, memory segment and index
+
+|Method|Args||
+|--|---|---|
+|constructor|filename:string|input vm filename|
+|hasMoreCommands|n/a|returns true if more lines can be read|
+|advance|n/a|gets the next line that is not blank or a comment|
+|commandType|n/a|returns the vm command as a  Parser.commands property|
+|arg1|n/a|returns the 1st arg in the vm command. eg. `local` in `push local 1`|
+|arg2|n/a|returns the 2nd arg in the vm command. returns undefined if command doesn't have one.|
+
+Parser.commands: Constant object with properties C_ARITHMETIC, C_PUSH, C_POP. Describes the command parsed
+
+### CodeWriter
+Converts the VM code to Hack assembly and writes to a file with the same name as the input but with `.asm` extension
+
+|Method|Args||
+|--|--|--|
+|constructor|filename|output asm filename|
+|writeArithmetic|command:string|Receives an arithmitic command (eg. add/sub) and writes assembly to file|
+|writePushPop|command:Parser.commands, segment:string, index: string|Receives a push/pop command (eg. push LCL 2) and writes assembly to file|
+
+## Deploy
+```
+npm install
+node --experimental-modules trans.mjs <input.vm>
+```
+
+## Test
+The code can be tested using the CPUEmulator tool from the [course page](http://nand2tetris.org/software.php).
+
+The course supplied `BasicTest`, `PointerTest` and `StaticTest` folders each contain 2 `.tst` files. `*VME.tst` is used by the VMEmulator tool which lets you step through and understand the VM stack abstraction. `*.tst` is used by the CPUEmulator to test the translated `.asm` file.
+
+
