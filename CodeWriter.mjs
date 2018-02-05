@@ -12,6 +12,8 @@ const {TEMP_BASE_ADDR, SYMBOL} = Object.freeze({
   },
 });
 
+const genId = ((id = 0) => () => id++)();
+
 export default class CodeWriter {
   constructor(filename) {
     console.log('Output to', `${process.cwd()}/${filename}`);
@@ -34,7 +36,7 @@ export default class CodeWriter {
     try {
       fs.appendFileSync(this.fd, `// ${command}\n`);
 
-      var {pop, push} = {
+      var {pop, push, compare} = {
         pop: ({setD = true} = {}) => [
           '@SP',
           'M=M-1',
@@ -48,6 +50,17 @@ export default class CodeWriter {
           '@SP',
           'M=M+1',
         ],
+        compare: (command, _labelId) => (_labelId = genId(), [ // compares M with D
+          'D=M-D',
+          `@TRUE_${_labelId}`,
+          `D;J${command.toUpperCase()}`,
+          'D=0',
+          `@THEN_${_labelId}`,
+          `0;JMP`,
+          `(TRUE_${_labelId})`,
+          'D=-1',
+          `(THEN_${_labelId})`,
+        ]),
       };
 
       let asm;
@@ -65,6 +78,15 @@ export default class CodeWriter {
           'D=M-D',
           push,
         );
+      } else if (command === 'eq' || command === 'lt' || command === 'gt') {
+        asm = [].concat(
+          pop(),
+          pop({ setD: false }),
+          compare(command),
+          push,
+        );
+      } else {
+        return;
       }
 
       fs.appendFileSync(this.fd, asm.join('\n') + '\n');
