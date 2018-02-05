@@ -85,8 +85,19 @@ export default class CodeWriter {
           compare(command),
           push,
         );
-      } else {
-        return;
+      } else if (command === 'neg' || command === 'not') {
+        asm = [].concat(
+          pop(),
+          `D=${command === 'neg' ? '-' : '!'}D`,
+          push,
+        );
+      } else if (command === 'and' || command === 'or') {
+        asm = [].concat(
+          pop(),
+          pop({setD: false}),
+          `D=D${command === 'and' ? '&' : '|'}M`,
+          push,
+        );
       }
 
       fs.appendFileSync(this.fd, asm.join('\n') + '\n');
