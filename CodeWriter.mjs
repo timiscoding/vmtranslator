@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import Parser from './Parser';
 
 const {TEMP_BASE_ADDR, SYMBOL} = Object.freeze({
@@ -14,6 +15,7 @@ const {TEMP_BASE_ADDR, SYMBOL} = Object.freeze({
 export default class CodeWriter {
   constructor(filename) {
     console.log('Output to', `${process.cwd()}/${filename}`);
+    this.class = path.basename(filename, '.asm');
     try {
       this.fd = fs.openSync(filename, 'w+');
     } catch(err) {
@@ -111,6 +113,11 @@ export default class CodeWriter {
             setD(index == 0 ? 'THIS' : 'THAT'),
             push,
           );
+        } else if (segment === 'static') {
+          asm = [].concat(
+            setD(`${this.class}.${index}`),
+            push,
+          );
         } else {
           asm = [].concat(
             setD(SYMBOL[segment], index),
@@ -157,6 +164,12 @@ export default class CodeWriter {
           asm = [].concat(
             pop,
             `@${index == 0 ? 'THIS' : 'THAT'}`,
+            'M=D',
+          );
+        } else if (segment === 'static') {
+          asm = [].concat(
+            pop,
+            `@${this.class}.${index}`,
             'M=D',
           );
         } else {
