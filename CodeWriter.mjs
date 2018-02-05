@@ -34,25 +34,40 @@ export default class CodeWriter {
     try {
       fs.appendFileSync(this.fd, `// ${command}\n`);
 
-      if (command === 'add' || command === 'sub') {
-        var op = command === 'add' ? 'D=D+M' : 'D=M-D';
+      var {pop, push} = {
+        pop: ({setD = true} = {}) => [
+          '@SP',
+          'M=M-1',
+          'A=M',
+          ...(setD ? ['D=M'] : []),
+        ],
+        push: [
+          '@SP',
+          'A=M',
+          'M=D',
+          '@SP',
+          'M=M+1',
+        ],
+      };
 
-        fs.appendFileSync(this.fd, [
-          '@SP',
-          'M=M-1', // SP--
-          'A=M',
-          'D=M', // D = *SP
-          '@SP',
-          'M=M-1', // SP--
-          'A=M',
-          op,
-          '@SP',
-          'A=M',
-          'M=D', // *SP = D
-          '@SP',
-          'M=M+1', // SP++
-        ].join('\n') + '\n');
+      let asm;
+      if (command === 'add') {
+        asm = [].concat(
+          pop(),
+          pop({ setD: false }),
+          'D=D+M',
+          push,
+        );
+      } else if (command === 'sub') {
+        asm = [].concat(
+          pop(),
+          pop({ setD: false }),
+          'D=M-D',
+          push,
+        );
       }
+
+      fs.appendFileSync(this.fd, asm.join('\n') + '\n');
     } catch(err) {
       console.log(err);
     }
