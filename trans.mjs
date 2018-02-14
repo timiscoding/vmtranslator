@@ -19,7 +19,7 @@ console.log('command'.padStart(12, ' '), 'arg1'.padStart(8, ' '), 'arg2'.padStar
 for (var count=0; parser.hasMoreCommands(); count++) {
   parser.advance();
   let command = parser.commandType();
-  let arg1 = parser.arg1();
+  let arg1 = parser.arg1() || '';
   let arg2 = parser.arg2() || '';
 
   console.log(command.padStart(12, ' '), arg1.padStart(8, ' '), arg2.padStart(4, ' '));
