@@ -1,39 +1,68 @@
 import path from 'path';
+import fs from 'fs';
 import Parser from './Parser';
 import CodeWriter from './CodeWriter';
 
-const vmfile = process.argv[2];
-if (typeof vmfile === 'undefined') {
-  console.log('Usage: node --experimental-modules trans.mjs <vm file>');
+const inputArg = process.argv[2];
+if (typeof inputArg === 'undefined') {
+  console.log('Usage: node --experimental-modules trans.mjs <vm file | dir of vm files>');
   process.exit(1);
 }
 
-const cw = new CodeWriter(`${path.join(path.dirname(vmfile), path.basename(vmfile, '.vm'))}.asm`);
-console.log('Reading', vmfile);
+let inputFiles, outputFile;
+const stats = fs.statSync(inputArg);
 
-const parser = new Parser(vmfile);
-
-console.log('Parsing commands...');
-console.log('command'.padStart(12, ' '), 'arg1'.padStart(8, ' '), 'arg2'.padStart(4, ' '));
-
-for (var count=0; parser.hasMoreCommands(); count++) {
-  parser.advance();
-  let command = parser.commandType();
-  let arg1 = parser.arg1() || '';
-  let arg2 = parser.arg2() || '';
-
-  console.log(command.padStart(12, ' '), arg1.padStart(8, ' '), arg2.padStart(4, ' '));
-
-  switch (parser.commandType()) {
-    case Parser.commands.C_ARITHMETIC:
-      cw.writeArithmetic(arg1);
-      break;
-    case Parser.commands.C_PUSH:
-    case Parser.commands.C_POP:
-      cw.writePushPop(command, arg1, arg2);
-      break;
-  }
+if (inputArg.endsWith('.vm') && stats.isFile()) {
+  inputFiles = [inputArg];
+  outputFile = path.format({
+    dir: path.dirname(inputArg),
+    name: path.basename(inputArg, '.vm'),
+    ext: '.asm'});
+} else if (stats.isDirectory()) {
+  const files = fs.readdirSync(inputArg);
+  inputFiles = files.map(f => path.resolve(inputArg, f)).filter(f => f.endsWith('.vm'));
+  outputFile = path.format({
+    dir: path.resolve(inputArg),
+    name: path.basename(path.resolve(inputArg)),
+    ext: '.asm'});
 }
 
-console.log('\nProcessed', count, 'commands');
+console.log('Input files:');
+for (let f of inputFiles) {
+  console.log(` ${path.relative(process.cwd(), f)}`);
+}
+
+const cw = new CodeWriter(outputFile);
+inputFiles.forEach(inputFile => {
+  const printf = (count, command, arg1, arg2) => console.log(
+    count.padStart(4, ' '),
+    command.padStart(12, ' '),
+    arg1.padStart(18, ' '),
+    arg2.padStart(4, ' ')
+  );
+  const parser = new Parser(inputFile);
+
+  console.log(`\nParsing ${path.relative(process.cwd(), inputFile)}...`);
+  printf('#', 'command', 'arg1', 'arg2');
+
+  for (var count = 1; parser.hasMoreCommands(); count++) {
+    parser.advance();
+    let command = parser.commandType();
+    let arg1 = parser.arg1() || '';
+    let arg2 = parser.arg2() || '';
+
+    printf(String(count), command, arg1, arg2);
+
+    switch (parser.commandType()) {
+      case Parser.commands.C_ARITHMETIC:
+        cw.writeArithmetic(arg1);
+        break;
+      case Parser.commands.C_PUSH:
+      case Parser.commands.C_POP:
+        cw.writePushPop(command, arg1, arg2);
+        break;
+    }
+  }
+})
+
 cw.close();

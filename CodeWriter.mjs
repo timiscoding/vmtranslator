@@ -16,7 +16,7 @@ const genId = ((id = 0) => () => id++)();
 
 export default class CodeWriter {
   constructor(filename) {
-    console.log('Output to', `${process.cwd()}/${filename}`);
+    console.log('Output file:', path.relative(process.cwd(), filename));
     this.class = path.basename(filename, '.asm');
     try {
       this.fd = fs.openSync(filename, 'w+');
