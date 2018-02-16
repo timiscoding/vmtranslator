@@ -61,6 +61,14 @@ inputFiles.forEach(inputFile => {
       case Parser.commands.C_POP:
         cw.writePushPop(command, arg1, arg2);
         break;
+      case Parser.commands.C_LABEL:
+        cw.writeLabel(arg1);
+        break;
+      case Parser.commands.C_IF:
+        cw.writeIf(arg1);
+        break;
+      default:
+        console.log('Unknown command in CodeWriter');
     }
   }
 })

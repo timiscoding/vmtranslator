@@ -79,7 +79,7 @@ main program coordinates parsing and translation
 ### Parser
 parses vm file line by line extracting commands, memory segment and index
 
-|Method|Args||
+|Method|Args|Function|
 |--|---|---|
 |constructor|filename:string|input vm filename|
 |hasMoreCommands|n/a|returns true if more lines can be read|
@@ -88,16 +88,18 @@ parses vm file line by line extracting commands, memory segment and index
 |arg1|n/a|returns the 1st arg in the vm command. eg. `local` in `push local 1`|
 |arg2|n/a|returns the 2nd arg in the vm command. returns undefined if command doesn't have one.|
 
-Parser.commands: Constant object with properties C_ARITHMETIC, C_PUSH, C_POP. Describes the command parsed
+Parser.commands: Constant object with properties {C_ARITHMETIC, C_PUSH, C_POP, C_LABEL, C_GOTO, C_IF, C_FUNCTION, C_RETURN, C_CALL} that describes the command parsed.
 
 ### CodeWriter
 Converts the VM code to Hack assembly and writes to a file with the same name as the input but with `.asm` extension
 
-|Method|Args||
+|Method|Args|Function|
 |--|--|--|
 |constructor|filename|output asm filename|
 |writeArithmetic|command:string|Receives an arithmitic command (eg. add/sub) and writes assembly to file|
 |writePushPop|command:Parser.commands, segment:string, index: string|Receives a push/pop command (eg. push LCL 2) and writes assembly to file|
+|writeLabel|label:string|label command for control flow|
+|writeIf|label:string|if-goto command|
 
 ## Deploy
 ```

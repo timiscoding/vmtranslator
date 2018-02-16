@@ -32,7 +32,7 @@ export default class Parser {
   }
 
   advance() {
-    this.line = this.line.toString().trim();
+    this.line = this.line.toString().split('//')[0].trim();
     return this.line;
   }
 

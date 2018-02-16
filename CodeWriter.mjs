@@ -18,11 +18,19 @@ export default class CodeWriter {
   constructor(filename) {
     console.log('Output file:', path.relative(process.cwd(), filename));
     this.class = path.basename(filename, '.asm');
+    this.lineCount = 0;
     try {
       this.fd = fs.openSync(filename, 'w+');
     } catch(err) {
       console.log(err);
     }
+  }
+
+  writeCode(asm, {countLine = true} = {}) {
+    if (countLine) {
+      this.lineCount += Array.isArray(asm) ? asm.length : 1;
+    }
+    fs.appendFileSync(this.fd, (Array.isArray(asm) ? asm.join('\n') : asm) + '\n');
   }
 
   /*
@@ -34,7 +42,7 @@ export default class CodeWriter {
   */
   writeArithmetic(command) {
     try {
-      fs.appendFileSync(this.fd, `// ${command}\n`);
+      fs.appendFileSync(this.fd, `// ${this.lineCount} ${command}\n`);
 
       var {pop, push, compare} = {
         pop: ({setD = true} = {}) => [
@@ -100,7 +108,7 @@ export default class CodeWriter {
         );
       }
 
-      fs.appendFileSync(this.fd, asm.join('\n') + '\n');
+      this.writeCode(asm);
     } catch(err) {
       console.log(err);
     }
@@ -121,13 +129,14 @@ export default class CodeWriter {
   */
   writePushPop(command, segment, index) {
     try {
-      fs.appendFileSync(this.fd, `// ${command} ${segment} ${index}\n`);
+      fs.appendFileSync(this.fd, `// ${this.lineCount} ${command} ${segment} ${index}\n`);
 
+      let asm;
       if (command === Parser.commands.C_PUSH) {
         let {setD, push} = {
           setD: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
               `@${baseAddr}`,
-              parseInt(baseAddr) ? 'D=A' : 'D=M',
+              Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
               ...(offset
                 ? [
                   `@${offset}`,
@@ -145,7 +154,6 @@ export default class CodeWriter {
           ],
         }
 
-        let asm;
         if (segment === 'constant') {
           asm = [].concat(
             setD(index),
@@ -172,8 +180,6 @@ export default class CodeWriter {
             push,
           );
         }
-
-        fs.appendFileSync(this.fd, asm.join('\n') + '\n');
       } else if (command === Parser.commands.C_POP) {
         if (segment === 'constant') {
           throw new Error('Cannot pop constant. Exiting...');
@@ -182,7 +188,7 @@ export default class CodeWriter {
         let {addr, pop, addrPtr} = {
           addr: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
             `@${baseAddr}`,
-            parseInt(baseAddr) ? 'D=A' : 'D=M',
+            Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
             `@${offset}`,
             'D=D+A', // baseAddr + offset
             '@addr',
@@ -201,7 +207,6 @@ export default class CodeWriter {
           ],
         };
 
-        let asm;
         if (segment === 'temp') {
           asm = [].concat(
             addr(TEMP_BASE_ADDR, index),
@@ -227,12 +232,27 @@ export default class CodeWriter {
             addrPtr,
           );
         }
-
-        fs.appendFileSync(this.fd, asm.join('\n') + '\n');
       }
+      this.writeCode(asm);
     } catch (err) {
       console.log(err);
     }
+  }
+
+  writeLabel(label) {
+    this.writeCode(`(${label})`, { countLine: false });
+  }
+
+  writeIf(label) {
+    this.writeCode([
+      `// ${this.lineCount} C_IF ${label}`,
+      '@SP',
+      'M=M-1',
+      'A=M',
+      'D=M',
+      `@${label}`,
+      'D;JNE',
+    ]);
   }
 
   close() {
