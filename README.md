@@ -98,8 +98,9 @@ Converts the VM code to Hack assembly and writes to a file with the same name as
 |constructor|filename|output asm filename|
 |writeArithmetic|command:string|Receives an arithmitic command (eg. add/sub) and writes assembly to file|
 |writePushPop|command:Parser.commands, segment:string, index: string|Receives a push/pop command (eg. push LCL 2) and writes assembly to file|
-|writeLabel|label:string|label command for control flow|
-|writeIf|label:string|if-goto command|
+|writeLabel|label:string|assembly for label command|
+|writeIf|label:string|assembly for if-goto command|
+|writeGoto|label:string|assembly for goto command|
 
 ## Deploy
 ```

@@ -244,8 +244,9 @@ export default class CodeWriter {
   }
 
   writeIf(label) {
+    fs.appendFileSync(this.fd, `// ${this.lineCount} C_IF ${label}\n`);
+
     this.writeCode([
-      `// ${this.lineCount} C_IF ${label}`,
       '@SP',
       'M=M-1',
       'A=M',
