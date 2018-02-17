@@ -256,6 +256,15 @@ export default class CodeWriter {
     ]);
   }
 
+  writeGoto(label) {
+    fs.appendFileSync(this.fd, `// ${this.lineCount} C_GOTO ${label}\n`);
+
+    this.writeCode([
+      `@${label}`,
+      '0;JMP',
+    ]);
+  }
+
   close() {
     try {
       fs.closeSync(this.fd);

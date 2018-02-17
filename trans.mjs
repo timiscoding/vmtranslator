@@ -67,6 +67,9 @@ inputFiles.forEach(inputFile => {
       case Parser.commands.C_IF:
         cw.writeIf(arg1);
         break;
+      case Parser.commands.C_GOTO:
+        cw.writeGoto(arg1);
+        break;
       default:
         console.log('Unknown command in CodeWriter');
     }
