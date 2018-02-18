@@ -37,7 +37,7 @@ inputFiles.forEach(inputFile => {
   const printf = (count, command, arg1, arg2) => console.log(
     count.padStart(4, ' '),
     command.padStart(12, ' '),
-    arg1.padStart(18, ' '),
+    arg1.padStart(20, ' '),
     arg2.padStart(4, ' ')
   );
   const parser = new Parser(inputFile);
@@ -69,6 +69,12 @@ inputFiles.forEach(inputFile => {
         break;
       case Parser.commands.C_GOTO:
         cw.writeGoto(arg1);
+        break;
+      case Parser.commands.C_FUNCTION:
+        cw.writeFunction(arg1, arg2);
+        break;
+      case Parser.commands.C_RETURN:
+        cw.writeReturn();
         break;
       default:
         console.log('Unknown command in CodeWriter');

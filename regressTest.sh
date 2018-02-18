@@ -6,6 +6,7 @@ StackArithmetic/SimpleAdd
 StackArithmetic/StackTest
 ProgramFlow/BasicLoop
 ProgramFlow/FibonacciSeries
+FunctionCalls/SimpleFunction
 )
 
 for dir in ${dirs[@]}

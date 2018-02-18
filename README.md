@@ -101,11 +101,13 @@ Converts the VM code to Hack assembly and writes to a file with the same name as
 |writeLabel|label:string|assembly for label command|
 |writeIf|label:string|assembly for if-goto command|
 |writeGoto|label:string|assembly for goto command|
+|writeFunction|functionName:string, numLocals:int|assembly for function command|
+|writeReturn|n/a|assembly for return command|
 
-## Deploy
+## Usage
 ```
 npm install
-node --experimental-modules trans.mjs <input.vm>
+node --experimental-modules trans.mjs <input.vm | dir with vm files>
 ```
 
 ## Test

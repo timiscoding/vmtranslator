@@ -12,6 +12,33 @@ const {TEMP_BASE_ADDR, SYMBOL} = Object.freeze({
   },
 });
 
+const {pop, push, setD} = Object.freeze({
+  pop: [
+    '@SP',
+    'M=M-1', // point to top of stack
+    'A=M',
+    'D=M', // pop in D
+  ],
+  push: [
+    '@SP',
+    'A=M',
+    'M=D', // *SP = D
+    '@SP',
+    'M=M+1',
+  ],
+  setD: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
+    `@${baseAddr}`,
+    Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
+    ...(offset
+      ? [
+        `@${offset}`,
+        'A=D+A',
+        'D=M',
+      ]
+      : '')
+  ],
+});
+
 const genId = ((id = 0) => () => id++)();
 
 export default class CodeWriter {
@@ -133,27 +160,6 @@ export default class CodeWriter {
 
       let asm;
       if (command === Parser.commands.C_PUSH) {
-        let {setD, push} = {
-          setD: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
-              `@${baseAddr}`,
-              Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
-              ...(offset
-                ? [
-                  `@${offset}`,
-                  'A=D+A',
-                  'D=M',
-                ]
-                : '')
-            ],
-          push: [
-            '@SP',
-            'A=M',
-            'M=D', // *SP = D
-            '@SP',
-            'M=M+1',
-          ],
-        }
-
         if (segment === 'constant') {
           asm = [].concat(
             setD(index),
@@ -185,7 +191,7 @@ export default class CodeWriter {
           throw new Error('Cannot pop constant. Exiting...');
         }
 
-        let {addr, pop, addrPtr} = {
+        let {addr, addrPtr} = {
           addr: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
             `@${baseAddr}`,
             Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
@@ -193,12 +199,6 @@ export default class CodeWriter {
             'D=D+A', // baseAddr + offset
             '@addr',
             'M=D',
-          ],
-          pop: [
-            '@SP',
-            'M=M-1', // point to top of stack
-            'A=M',
-            'D=M', // pop in D
           ],
           addrPtr: [
             '@addr',
@@ -263,6 +263,57 @@ export default class CodeWriter {
       `@${label}`,
       '0;JMP',
     ]);
+  }
+
+  writeFunction(functionName, numLocals) {
+    fs.appendFileSync(this.fd, `// ${this.lineCount} C_FUNCTION ${functionName} ${numLocals}\n`);
+
+    this.writeLabel(functionName);
+    this.writeCode([
+      ...Array(parseInt(numLocals)).fill().reduce((p, c) => p.concat(
+        setD(0),
+        push,
+      ), []),
+    ]);
+  }
+
+  writeReturn() {
+    let {setVarFromFrame} = {
+      setVarFromFrame: (target, offset) => [
+        '@END_FRAME',
+        'D=M',
+        `@${offset}`,
+        'A=D-A',
+        'D=M',
+        `@${target}`,
+        'M=D',
+      ],
+    };
+
+    fs.appendFileSync(this.fd, `// ${this.lineCount} C_RETURN\n`);
+
+    this.writeCode([].concat(
+      '@LCL',
+      'D=M',
+      '@END_FRAME',
+      'M=D', // END_FRAME = LCL
+      setVarFromFrame('RETURN_ADDR', 5), // RETURN_ADDR = END_FRAME - 5
+      pop,
+      '@ARG',
+      'A=M',
+      'M=D', // *ARG = *SP
+      '@ARG',
+      'D=M+1',
+      '@SP',
+      'M=D', // SP = ARG + 1
+      setVarFromFrame('THAT', 1), // THAT = *(END_FRAME - 1)
+      setVarFromFrame('THIS', 2), // THIS = *(END_FRAME - 2)
+      setVarFromFrame('ARG', 3), // ARG = *(END_FRAME - 3)
+      setVarFromFrame('LCL', 4), // LCL = *(END_FRAME - 4)
+      '@RETURN_ADDR',
+      'A=M',
+      '0;JMP',
+    ));
   }
 
   close() {
