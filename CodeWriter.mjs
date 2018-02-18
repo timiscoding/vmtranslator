@@ -191,17 +191,22 @@ export default class CodeWriter {
           throw new Error('Cannot pop constant. Exiting...');
         }
 
+        // set up temp variables to impl pop
+        const {ADDR} = Object.freeze({
+          ADDR: 13,
+        });
+
         let {addr, addrPtr} = {
           addr: (baseAddr, offset) => [ // baseAddr: mem segment variable / integer
             `@${baseAddr}`,
             Number.isInteger(parseInt(baseAddr)) ? 'D=A' : 'D=M',
             `@${offset}`,
             'D=D+A', // baseAddr + offset
-            '@addr',
+            `@${ADDR}`,
             'M=D',
           ],
           addrPtr: [
-            '@addr',
+            `@${ADDR}`,
             'A=M',
             'M=D', // *addr = D
           ],
@@ -278,9 +283,15 @@ export default class CodeWriter {
   }
 
   writeReturn() {
+    // set up temp variables to impl return
+    const { END_FRAME, RETURN_ADDR } = Object.freeze({
+      END_FRAME: 13,
+      RETURN_ADDR: 14,
+    })
+
     let {setVarFromFrame} = {
       setVarFromFrame: (target, offset) => [
-        '@END_FRAME',
+        `@${END_FRAME}`,
         'D=M',
         `@${offset}`,
         'A=D-A',
@@ -295,9 +306,9 @@ export default class CodeWriter {
     this.writeCode([].concat(
       '@LCL',
       'D=M',
-      '@END_FRAME',
+      `@${END_FRAME}`,
       'M=D', // END_FRAME = LCL
-      setVarFromFrame('RETURN_ADDR', 5), // RETURN_ADDR = END_FRAME - 5
+      setVarFromFrame(RETURN_ADDR, 5), // RETURN_ADDR = END_FRAME - 5
       pop,
       '@ARG',
       'A=M',
@@ -310,7 +321,7 @@ export default class CodeWriter {
       setVarFromFrame('THIS', 2), // THIS = *(END_FRAME - 2)
       setVarFromFrame('ARG', 3), // ARG = *(END_FRAME - 3)
       setVarFromFrame('LCL', 4), // LCL = *(END_FRAME - 4)
-      '@RETURN_ADDR',
+      `@${RETURN_ADDR}`,
       'A=M',
       '0;JMP',
     ));
