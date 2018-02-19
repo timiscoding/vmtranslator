@@ -4,6 +4,7 @@ import Parser from './Parser';
 import CodeWriter from './CodeWriter';
 
 const inputArg = process.argv[2];
+const noBootStrapArg = process.argv[3];
 if (typeof inputArg === 'undefined') {
   console.log('Usage: node --experimental-modules trans.mjs <vm file | dir of vm files>');
   process.exit(1);
@@ -33,6 +34,8 @@ for (let f of inputFiles) {
 }
 
 const cw = new CodeWriter(outputFile);
+noBootStrapArg !== 'nobootstrap' && cw.writeInit();
+
 inputFiles.forEach(inputFile => {
   const printf = (count, command, arg1, arg2) => console.log(
     count.padStart(4, ' '),
@@ -75,6 +78,9 @@ inputFiles.forEach(inputFile => {
         break;
       case Parser.commands.C_RETURN:
         cw.writeReturn();
+        break;
+      case Parser.commands.C_CALL:
+        cw.writeCall(arg1, arg2);
         break;
       default:
         console.log('Unknown command in CodeWriter');

@@ -40,6 +40,13 @@ const {pop, push, setD} = Object.freeze({
 });
 
 const genId = ((id = 0) => () => id++)();
+const genReturnLabel = (() => {
+  let labels = {};
+  return (functionName) => {
+    labels[functionName] = (labels[functionName] || 0) + 1;
+    return `${functionName}$ret.${labels[functionName]}`;
+  }
+})();
 
 export default class CodeWriter {
   constructor(filename) {
@@ -53,9 +60,29 @@ export default class CodeWriter {
     }
   }
 
+  writeInit() {
+    fs.appendFileSync(this.fd, '// BEGIN BOOTSTRAP\n');
+
+    this.writeCode([
+      '@256',
+      'D=A',
+      '@SP',
+      'M=D', // SP = 256
+    ]);
+
+    this.writeCall('Sys.init', 0);
+    fs.appendFileSync(this.fd, '// END BOOTSTRAP\n');
+  }
+
   writeCode(asm, {countLine = true} = {}) {
+    const notLabel = line => line[0] !== '(';
+
     if (countLine) {
-      this.lineCount += Array.isArray(asm) ? asm.length : 1;
+      if (Array.isArray(asm)) {
+        this.lineCount += asm.filter(notLabel).length;
+      } else if (notLabel(asm)) {
+        this.lineCount++;
+      }
     }
     fs.appendFileSync(this.fd, (Array.isArray(asm) ? asm.join('\n') : asm) + '\n');
   }
@@ -245,7 +272,7 @@ export default class CodeWriter {
   }
 
   writeLabel(label) {
-    this.writeCode(`(${label})`, { countLine: false });
+    this.writeCode(`(${this.functionName + '$' + label})`);
   }
 
   writeIf(label) {
@@ -256,7 +283,7 @@ export default class CodeWriter {
       'M=M-1',
       'A=M',
       'D=M',
-      `@${label}`,
+      `@${this.functionName + '$' + label}`,
       'D;JNE',
     ]);
   }
@@ -265,21 +292,24 @@ export default class CodeWriter {
     fs.appendFileSync(this.fd, `// ${this.lineCount} C_GOTO ${label}\n`);
 
     this.writeCode([
-      `@${label}`,
+      `@${this.functionName + '$' + label}`,
       '0;JMP',
     ]);
   }
 
   writeFunction(functionName, numLocals) {
+    this.functionName = functionName;
     fs.appendFileSync(this.fd, `// ${this.lineCount} C_FUNCTION ${functionName} ${numLocals}\n`);
 
-    this.writeLabel(functionName);
-    this.writeCode([
-      ...Array(parseInt(numLocals)).fill().reduce((p, c) => p.concat(
-        setD(0),
-        push,
-      ), []),
-    ]);
+    this.writeCode(`(${functionName})`);
+
+    if (numLocals > 0) {
+      this.writeCode([
+        ...Array(parseInt(numLocals)).fill().reduce((p, c) => p.concat(
+          setD(0),
+          push,
+        ), [])]);
+    }
   }
 
   writeReturn() {
@@ -324,6 +354,41 @@ export default class CodeWriter {
       `@${RETURN_ADDR}`,
       'A=M',
       '0;JMP',
+    ));
+  }
+
+  writeCall(functionName, numArgs) {
+    const pushVal = addr => [].concat(
+      `@${addr}`,
+      /LCL|ARG|THIS|THAT/.test(addr)
+        ? 'D=M'
+        : 'D=A',
+      push
+    );
+    const FRAME_SIZE = 5;
+
+    fs.appendFileSync(this.fd, `// ${this.lineCount} C_CALL ${functionName} ${numArgs}\n`);
+
+    const RETURN_LABEL = genReturnLabel(functionName);
+    this.writeCode([].concat(
+      pushVal(RETURN_LABEL), // push return address
+      pushVal('LCL'), // push local segment base address
+      pushVal('ARG'), // push arg segment base address
+      pushVal('THIS'), // push this segment base address
+      pushVal('THAT'), // push that segment base address
+      `@${FRAME_SIZE + parseInt(numArgs)}`,
+      'D=A',
+      '@SP',
+      'D=M-D',
+      '@ARG',
+      'M=D', // ARG = SP - 5 - numArgs
+      '@SP',
+      'D=M',
+      '@LCL',
+      'M=D', // LCL = SP
+      `@${functionName}`,
+      '0;JMP', // goto functionName
+      `(${RETURN_LABEL})`
     ));
   }
 

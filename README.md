@@ -96,6 +96,7 @@ Converts the VM code to Hack assembly and writes to a file with the same name as
 |Method|Args|Function|
 |--|--|--|
 |constructor|filename|output asm filename|
+|writeInit|n/a|VM initialisation aka bootstrap code|
 |writeArithmetic|command:string|Receives an arithmitic command (eg. add/sub) and writes assembly to file|
 |writePushPop|command:Parser.commands, segment:string, index: string|Receives a push/pop command (eg. push LCL 2) and writes assembly to file|
 |writeLabel|label:string|assembly for label command|
@@ -103,6 +104,7 @@ Converts the VM code to Hack assembly and writes to a file with the same name as
 |writeGoto|label:string|assembly for goto command|
 |writeFunction|functionName:string, numLocals:int|assembly for function command|
 |writeReturn|n/a|assembly for return command|
+|writeCall|functionName:string, numArgs:int|assembly for call command|
 
 ## Usage
 ```

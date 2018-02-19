@@ -1,4 +1,4 @@
-dirs=(
+nobootstrap=(
 MemoryAccess/BasicTest
 MemoryAccess/PointerTest
 MemoryAccess/StaticTest
@@ -9,7 +9,22 @@ ProgramFlow/FibonacciSeries
 FunctionCalls/SimpleFunction
 )
 
-for dir in ${dirs[@]}
+bootstrap=(
+FunctionCalls/FibonacciElement
+FunctionCalls/NestedCall
+)
+
+for dir in ${nobootstrap[@]}
+do
+  node --experimental-modules trans.mjs $dir nobootstrap
+  if [ $? != 0 ]
+  then
+    echo 'TRANSLATION DID NOT FINISH'
+    break
+  fi
+done
+
+for dir in ${bootstrap[@]}
 do
   node --experimental-modules trans.mjs $dir
   if [ $? != 0 ]
