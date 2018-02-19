@@ -193,7 +193,7 @@ export default class CodeWriter {
 
         // set up temp variables to impl pop
         const {ADDR} = Object.freeze({
-          ADDR: 13,
+          ADDR: 'R13',
         });
 
         let {addr, addrPtr} = {
@@ -285,8 +285,8 @@ export default class CodeWriter {
   writeReturn() {
     // set up temp variables to impl return
     const { END_FRAME, RETURN_ADDR } = Object.freeze({
-      END_FRAME: 13,
-      RETURN_ADDR: 14,
+      END_FRAME: 'R13',
+      RETURN_ADDR: 'R14',
     })
 
     let {setVarFromFrame} = {
