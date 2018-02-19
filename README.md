@@ -105,6 +105,7 @@ Converts the VM code to Hack assembly and writes to a file with the same name as
 |writeFunction|functionName:string, numLocals:int|assembly for function command|
 |writeReturn|n/a|assembly for return command|
 |writeCall|functionName:string, numArgs:int|assembly for call command|
+|setFilename|filename:string|informs when a new file is being translated|
 
 ## Usage
 ```
@@ -115,6 +116,15 @@ node --experimental-modules trans.mjs <input.vm | dir with vm files>
 ## Test
 The code can be tested using the CPUEmulator tool from the [course page](http://nand2tetris.org/software.php).
 
-The course supplied `BasicTest`, `PointerTest` and `StaticTest` folders each contain 2 `.tst` files. `*VME.tst` is used by the VMEmulator tool which lets you step through and understand the VM stack abstraction. `*.tst` is used by the CPUEmulator to test the translated `.asm` file.
+The course supplies the following test folders:
+```
+MemoryAccess
+StackArithmetic
+ProgramFlow
+FunctionCalls
+```
+each containing 2 `.tst` files. `*VME.tst` is used by the VMEmulator tool which lets you step through and understand the VM stack abstraction. `*.tst` is used by the CPUEmulator to test the translated `.asm` file.
+
+To avoid manually running the translator against each and every test directory, `regressTest.sh` can be run to automatically do it for you.
 
 

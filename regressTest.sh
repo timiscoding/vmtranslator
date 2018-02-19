@@ -12,6 +12,7 @@ FunctionCalls/SimpleFunction
 bootstrap=(
 FunctionCalls/FibonacciElement
 FunctionCalls/NestedCall
+FunctionCalls/StaticsTest
 )
 
 for dir in ${nobootstrap[@]}

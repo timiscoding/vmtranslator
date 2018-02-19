@@ -51,13 +51,17 @@ const genReturnLabel = (() => {
 export default class CodeWriter {
   constructor(filename) {
     console.log('Output file:', path.relative(process.cwd(), filename));
-    this.class = path.basename(filename, '.asm');
     this.lineCount = 0;
     try {
       this.fd = fs.openSync(filename, 'w+');
     } catch(err) {
       console.log(err);
     }
+  }
+
+  setFilename(filename) {
+    this.className = path.basename(filename, '.vm');
+    console.log('classname', this.className);
   }
 
   writeInit() {
@@ -204,7 +208,7 @@ export default class CodeWriter {
           );
         } else if (segment === 'static') {
           asm = [].concat(
-            setD(`${this.class}.${index}`),
+            setD(`${this.className}.${index}`),
             push,
           );
         } else {
@@ -254,7 +258,7 @@ export default class CodeWriter {
         } else if (segment === 'static') {
           asm = [].concat(
             pop,
-            `@${this.class}.${index}`,
+            `@${this.className}.${index}`,
             'M=D',
           );
         } else {

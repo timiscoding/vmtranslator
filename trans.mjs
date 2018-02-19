@@ -44,6 +44,7 @@ inputFiles.forEach(inputFile => {
     arg2.padStart(4, ' ')
   );
   const parser = new Parser(inputFile);
+  cw.setFilename(inputFile);
 
   console.log(`\nParsing ${path.relative(process.cwd(), inputFile)}...`);
   printf('#', 'command', 'arg1', 'arg2');
