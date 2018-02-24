@@ -39,7 +39,7 @@ export default class Parser {
   commandType() {
     const pop = /^pop\s+\w+\s+\d+$/;
     const push = /^push\s+\w+\s+\d+$/;
-    const arithLogic = /^add|sub|neg|eq|gt|lt|and|or|not$/;
+    const arithLogic = /^(add|sub|neg|eq|gt|lt|and|or|not)$/;
     const label = new RegExp(`^label\\s+${VALID_NAME_RE}$`);
     const goto = new RegExp(`^goto\\s+${VALID_NAME_RE}$`);
     const ifgoto = new RegExp(`^if-goto\\s+${VALID_NAME_RE}$`);
